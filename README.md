@@ -120,9 +120,3 @@ Failed wallets:
 - 0x5678...efgh
 - 0x9abc...def0
 ```
-
-<div align="center">
-
-Made with ❤️ for Linea Community
-
-</div>
