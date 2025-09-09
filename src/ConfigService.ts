@@ -53,16 +53,16 @@ export class ConfigService {
   private static parseWalletEntry(rawItem: string, index: number): UserWallet {
     let [privateKey, withdrawAddress] = rawItem.split(':');
 
+    if (privateKey && !privateKey.startsWith('0x')) {
+      privateKey = `0x${privateKey}`;
+    }
+
     if (!privateKey || !ethers.isHexString(privateKey, 32)) {
       throw new Error(`Invalid private key at line ${index + 1}`);
     }
 
     if (withdrawAddress && !ethers.isAddress(withdrawAddress)) {
       throw new Error(`Invalid withdraw address: ${withdrawAddress} at line ${index + 1}`);
-    }
-
-    if (!privateKey.startsWith('0x')) {
-      privateKey = `0x${privateKey}`;
     }
 
     return { privateKey, withdrawAddress };
