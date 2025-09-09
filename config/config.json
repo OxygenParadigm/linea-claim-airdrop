@@ -1,0 +1,15 @@
+{
+  "mode": "claim", // claim | claim_withdraw | claim_swap
+  "rpc_list": [
+    "https://linea-rpc.publicnode.com",
+    "https://rpc.linea.build",
+    "https://1rpc.io/linea"
+  ],
+  "number_of_threads": 1,
+  "start_delay_seconds": [3, 9],
+  "claim_delay_seconds": [20, 90],
+  "retries": 3,
+  "shuffle_wallets": true,
+  "retry_delay_seconds": 5,
+  "odos_slippage": 3
+}
