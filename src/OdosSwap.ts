@@ -2,7 +2,8 @@ import axios, { AxiosInstance } from 'axios';
 import { ethers } from 'ethers';
 import pRetry from 'p-retry';
 
-import { SwapConfig, SwapParams, SwapService } from './Interfaces';
+import { GasProvider } from './GasProvider';
+import { Config, SwapConfig, SwapParams, SwapService } from './Interfaces';
 import { approve, sendTransaction, zeroAddress } from './Utils';
 
 export class OdosSwap implements SwapService {
@@ -12,7 +13,11 @@ export class OdosSwap implements SwapService {
     1, 137, 42161, 10, 56, 8453, 43114, 250, 324, 534352, 34443, 59144, 5000, 130, 146, 252,
   ];
 
-  constructor(private readonly swapConfig: SwapConfig) {
+  constructor(
+    private readonly swapConfig: SwapConfig,
+    private readonly gasProvider: GasProvider,
+    private readonly config: Config,
+  ) {
     this.axiosInstance = axios.create({
       baseURL: 'https://api.odos.xyz',
     });
@@ -76,10 +81,20 @@ export class OdosSwap implements SwapService {
 
     this.validateSimulation(odosTransaction, tokenFrom, tokenTo);
 
+    const feeData = await this.gasProvider.waitForGasPrice(
+      this.config.max_gwei_limit,
+      this.config.wait_gwei_timout_minutes * 60 * 1000,
+    );
+
     await sendTransaction(
       wallet,
-      odosTransaction.transaction,
+      {
+        ...odosTransaction.transaction,
+        maxFeePerGas: feeData.maxFeePerGas,
+        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
+      },
       `Odos swap LINEA -> ETH, amount: ${ethers.formatEther(rawAmount)}`,
+      this.config.tx_timout_minutes,
     );
   }
 

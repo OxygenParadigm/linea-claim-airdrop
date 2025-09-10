@@ -21,6 +21,10 @@ export interface Config {
   shuffle_wallets: boolean;
   retry_delay_seconds: number;
   odos_slippage: number;
+  max_gwei_limit: number;
+  wait_gwei_timout_minutes: number;
+  boost_max_priority_fee_percentage: number;
+  tx_timout_minutes: number;
 }
 
 export interface SwapConfig {

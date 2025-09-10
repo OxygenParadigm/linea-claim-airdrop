@@ -1,10 +1,11 @@
-import delay, { rangeDelay } from 'delay';
+import delay from 'delay';
 import { computeAddress, ethers } from 'ethers';
 import PQueue from 'p-queue';
 import pRetry from 'p-retry';
 
 import { ClaimStatistics } from './ClaimStatistics';
 import { ConfigService } from './ConfigService';
+import { GasProvider } from './GasProvider';
 import { Config, Mode, UserWallet } from './Interfaces';
 import { OdosSwap } from './OdosSwap';
 import {
@@ -17,11 +18,7 @@ import {
 
 const config: Config = ConfigService.loadConfig();
 const wallets: UserWallet[] = ConfigService.loadWallets();
-const odos = new OdosSwap({
-  retries: config.retries,
-  retryDelay: config.retry_delay_seconds * 1000,
-  slippageLimitPercent: config.odos_slippage,
-});
+
 const claimStatistics = new ClaimStatistics(wallets.length);
 
 const chainId = 59144;
@@ -33,6 +30,17 @@ const fallbackProvider = new ethers.FallbackProvider(
     quorum: 1,
     eventQuorum: 1,
   },
+);
+
+const gasProvider = new GasProvider(fallbackProvider);
+const odos = new OdosSwap(
+  {
+    retries: config.retries,
+    retryDelay: config.retry_delay_seconds * 1000,
+    slippageLimitPercent: config.odos_slippage,
+  },
+  gasProvider,
+  config,
 );
 
 const contracts = {
@@ -64,11 +72,24 @@ async function claim(privateKey: string): Promise<void> {
     return;
   }
 
+  const feeData = await gasProvider.waitForGasPrice(
+    config.max_gwei_limit,
+    config.wait_gwei_timout_minutes * 60 * 1000,
+  );
+
   const tx: ethers.TransactionRequest = {
     to: contracts.claim,
     data: contract.interface.encodeFunctionData('claim'),
+    maxFeePerGas: feeData.maxFeePerGas,
+    maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
   };
-  await sendTransaction(wallet, tx, `Claim LINEA airdrop, allocation: ${allocation}`);
+
+  await sendTransaction(
+    wallet,
+    tx,
+    `Claim LINEA airdrop, allocation: ${allocation}`,
+    config.tx_timout_minutes,
+  );
   await delay(1000);
   claimStatistics.addClaimedAmount(allocation);
 }

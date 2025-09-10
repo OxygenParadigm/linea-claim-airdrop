@@ -53,13 +53,14 @@ export async function sendTransaction(
   wallet: ethers.Wallet,
   tx: ethers.TransactionRequest,
   message: string,
+  timout: number = 3,
 ): Promise<ethers.TransactionReceipt> {
   const transactionResponse = await wallet.sendTransaction(tx);
   console.log(`${wallet.address}: ${message} started, hash: ${transactionResponse.hash}`);
   const receipt = await wallet.provider!.waitForTransaction(
     transactionResponse.hash,
     1,
-    3 * 60 * 1000,
+    timout * 60 * 1000,
   );
 
   if (!receipt || receipt.status !== 1) {
