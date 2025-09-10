@@ -7,7 +7,13 @@ import { ClaimStatistics } from './ClaimStatistics';
 import { ConfigService } from './ConfigService';
 import { Config, Mode, UserWallet } from './Interfaces';
 import { OdosSwap } from './OdosSwap';
-import { getERC20Contract, sendTransaction, zeroAddress } from './Utils';
+import {
+  getERC20Contract,
+  randomNumber,
+  sendTransaction,
+  shuffleArray,
+  zeroAddress,
+} from './Utils';
 
 const config: Config = ConfigService.loadConfig();
 const wallets: UserWallet[] = ConfigService.loadWallets();
@@ -81,8 +87,8 @@ async function withdraw(privateKey: string, withdrawAddress: string): Promise<vo
   await sendTransaction(
     wallet,
     {
-      to: withdrawAddress,
-      value: balanceRaw,
+      to: contracts.lineaToken,
+      data: tokenContract.interface.encodeFunctionData('transfer', [withdrawAddress, balanceRaw]),
     },
     `Withdraw ${balance}LINEA to ${withdrawAddress}`,
   );
@@ -116,6 +122,12 @@ function validateWalletConfiguration(): void {
   }
 }
 
+async function claimSleep(wallet: UserWallet): Promise<void> {
+  const seconds = randomNumber(config.claim_delay_seconds);
+  console.log(`${computeAddress(wallet.privateKey)}: Sleep for ${seconds}s`);
+  await delay(seconds * 1000);
+}
+
 async function processWallet(wallet: UserWallet): Promise<void> {
   await claim(wallet.privateKey);
 
@@ -126,6 +138,8 @@ async function processWallet(wallet: UserWallet): Promise<void> {
   if (config.mode === Mode.CLAIM_WITHDRAW) {
     await withdraw(wallet.privateKey, wallet.withdrawAddress!);
   }
+
+  await claimSleep(wallet);
 }
 
 async function processWalletWithRetry(wallet: UserWallet): Promise<void> {
@@ -147,8 +161,10 @@ async function processWalletWithRetry(wallet: UserWallet): Promise<void> {
 async function processAllWallets(): Promise<void> {
   const queue = new PQueue({ concurrency: config.number_of_threads });
 
-  for (const wallet of wallets) {
-    await rangeDelay(config.start_delay_seconds[0] * 1000, config.start_delay_seconds[1] * 1000);
+  const walletsToProcess = config.shuffle_wallets ? shuffleArray(wallets) : wallets;
+
+  for (const wallet of walletsToProcess) {
+    await delay(randomNumber(config.start_delay_seconds) * 1000);
     void queue.add(() => processWalletWithRetry(wallet));
   }
 

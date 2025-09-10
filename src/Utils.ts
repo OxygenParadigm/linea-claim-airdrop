@@ -24,6 +24,18 @@ export function getPromiseWithResolvers<T>() {
   return { promise, resolve, reject };
 }
 
+export function randomNumber(range: [number, number]): number {
+  const [min, max] = range;
+
+  if (min > max) {
+    throw new Error(
+      `The minimum value must be less than or equal to the maximum value. min: ${range[0]}, max: ${range[1]}`,
+    );
+  }
+
+  return Math.random() * (max - min) + min;
+}
+
 export async function approve(
   wallet: ethers.Wallet,
   tokenAddress: string,
